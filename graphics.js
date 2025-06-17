@@ -16,15 +16,15 @@ let angle = 0; // Initial angle for rotation
 const proj = [
     [1, 0, 0],
     [0, 1, 0],
-    [0, 0, 1],
+    [0, 0, 1]
 ];
 
 // Function to create a rotation matrix for z 3D transformations. Just matrix math
-const rozMat = (angle) => { 
+const rotZMat = (angle) => {
     return [
         [Math.cos(angle), -Math.sin(angle), 0],
         [Math.sin(angle), Math.cos(angle), 0],
-        [0, 0, 1]
+        [0 , 0, 1]
     ];
 }
 
@@ -32,8 +32,8 @@ const rotXMat = (angle) => {
     return [
         [1, 0, 0],
         [0, Math.cos(angle), -Math.sin(angle)],
-        [0, Math.sin(angle), Math.cos(angle)]
-    ]
+        [0 , Math.sin(angle), Math.cos(angle)]
+    ];
 }
 
 const rotYMat = (angle) => {
@@ -41,34 +41,26 @@ const rotYMat = (angle) => {
         [Math.cos(angle), 0, Math.sin(angle)],
         [0, 1, 0],
         [-Math.sin(angle), 0, Math.cos(angle)]
-    ]
+    ];
 }
 
-function multMat(m, v) {
-    const { x, y, z } = v; // Destructures the vector v into x, y, z components
-    // Multiplies a matrix m by a vector v
+function multMat(matrix, vertex) {
+    const x = vertex.x;
+    const y = vertex.y;
+    const z = vertex.z;
+
     return {
-        x: m[0][0] * x + m[0][1] * y + m[0][2] * z,
-        y: m[1][0] * x + m[1][1] * y + m[1][2] * z,
-        z: m[2][0] * x + m[2][1] * y + m[2][2] * z
-    }
+        x: matrix[0][0] * x + matrix[0][1] * y + matrix[0][2] * z,
+        y: matrix[1][0] * x + matrix[1][1] * y + matrix[1][2] * z,
+        z: matrix[2][0] * x + matrix[2][1] * y + matrix[2][2] * z
+    };
 }
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-const texture = new Image(); // Creates texture used later
-texture.src = 'wallTex.jpg'; // Sets the source of the image
+//const texture = new Image(); // Creates texture used later
+//texture.src = 'wallTex.jpg'; // Sets the source of the image
 
 
 
@@ -79,40 +71,78 @@ class Vertex {
         this.y = y; // Y coordinate
         this.z = z; // Z coordinate
     }
+}
+const drawVertex = (x, y) => {
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = "white";
+    ctx.fill();
+}
 
-    draw() { // Method to draw the vertex
-        ctx.beginPath(); // Begins a new path
-        ctx.arc(this.x, this.y, 5, 0, Math.PI * 2); // Draws a circle at the vertex position
-        ctx.fillStyle = "white"; // Sets the fill color to white
-        ctx.fill(); // Fills the circle
-    }
+const drawLine = (x1, y1, x2, y2) => {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = "white";
+    ctx.stroke();
 }
 
 
 const P = []; // Array to hold vertices
-P[0] = new Vertex(400, 200, 0); // Creates a vertex at the center of the canvas
-P[1] = new Vertex(600, 200, 0); // Creates a vertex 100 pixels to the right of the center
-P[2] = new Vertex(400, 400, 0); // Creates a vertex 100 pixels below the center
-P[3] = new Vertex(600, 400, 0); // Creates a vertex 100 pixels to the left of the center
+const center = new Vertex(CW2, CH2, 0); // Creates a center vertex at the middle of the canvas
 
-
-
-const engine = () => {
-    angle += 0.02; // Increments the angle for rotation
-    ctx.clearRect(0, 0, CW, CH); // Clears the canvas
-    ctx.fillStyle = 'black'; // Sets the fill color to black for background
-    ctx.fillRect(0, 0, CW, CH); // Fills the entire canvas with black
-
-
-    for (let v of P) {
-        let rotated = multMat(rotYMat(angle), v); // Rotates the vertex around the Y-axis
-        let proj2D = multMat(proj, rotated); // Projects the 3D vertex onto the 2D canvas
-
-        drawVertex(proj2D.x, proj2D.y)
-    }
-
-
-    requestAnimationFrame(engine); // Calls the engine function recursively to create an animation loop
+const init = () => {
+    P[0] = new Vertex(400, 200, -100);
+    P[1] = new Vertex(600, 200, -100);
+    P[2] = new Vertex(400, 400, -100);
+    P[3] = new Vertex(600, 400, -100);
+    P[4] = new Vertex(400, 200, 100);
+    P[5] = new Vertex(600, 200, 100);
+    P[6] = new Vertex(400, 400, 100);
+    P[7] = new Vertex(600, 400, 100);
 }
 
-engine(); // Starts the engine function
+const T = [
+    [0, 1, 2], [1, 3, 2],
+    [5, 4, 7], [4, 6, 7],
+    [4, 0, 6], [0, 2, 6],
+    [1, 5, 3], [5, 7, 3],
+    [4, 5, 0], [5, 1, 0],
+    [2, 3, 6], [3, 7, 6],
+];
+
+const engine = () => {
+    angle += 0.02;
+
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+    const projected = [];
+
+    for (let v of P) {
+        let translated = new Vertex(v.x - center.x, v.y - center.y, v.z - center.z);
+        let rotated = multMat(rotYMat(angle), translated);
+        rotated = multMat(rotXMat(angle), rotated);
+        rotated = multMat(rotZMat(angle), rotated);
+        let movedBack = new Vertex(rotated.x + center.x, rotated.y + center.y, rotated.z + center.z);
+        let proj2D = multMat(proj, movedBack);
+        
+        drawVertex(proj2D.x, proj2D.y);
+        projected.push(proj2D);
+    }
+
+    for(let t of T) {
+        const p1 = projected[t[0]];
+        const p2 = projected[t[1]];
+        const p3 = projected[t[2]];
+
+        drawLine(p1.x, p1.y, p2.x, p2.y);
+        drawLine(p2.x, p2.y, p3.x, p3.y);
+        drawLine(p3.x, p3.y, p1.x, p1.y);
+    }
+    requestAnimationFrame(engine);
+}
+
+init();
+engine();
